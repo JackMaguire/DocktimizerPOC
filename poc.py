@@ -59,9 +59,9 @@ def estimate_lowest_score_2D():
 
 def estimate_lowest_score_3D():
     lowest_score = 0.0
-    for x in [i * 0.01 for i in range(80, 100)]:
-        for y in [i * 0.01 for i in range(80, 100)]:
-            for z in [i * 0.01 for i in range(80, 100)]:
+    for x in [i * 0.001 for i in range(800, 1000)]:
+        for y in [i * 0.001 for i in range(800, 1000)]:
+            for z in [i * 0.001 for i in range(800, 1000)]:
                 score = score_xyz( x, y, z )
                 lowest_score = min( lowest_score, score )
     return lowest_score;
@@ -114,8 +114,8 @@ def run_single_monte_carlo_2D():
     end = time.time()
     return best_score, (end - start)
 
-best_score, runtime = run_single_monte_carlo_2D()
-print( "2D", best_score, runtime )
+#best_score, runtime = run_single_monte_carlo_2D()
+#print( "2D", best_score, runtime )
 
 def run_single_monte_carlo_3D():
     start = time.time()
@@ -129,9 +129,9 @@ def run_single_monte_carlo_3D():
     neg_temp = -0.8 # Based on DockingLowRes.cc
 
     for  _ in range( 0, 500 ):
-        trial_x = np.random.normal( x, 0.05 )
-        trial_y = np.random.normal( y, 0.05 )
-        trial_z = np.random.normal( z, 0.05 )
+        trial_x = np.random.normal( x, 0.1 )
+        trial_y = np.random.normal( y, 0.1 )
+        trial_z = np.random.normal( z, 0.1 )
 
         if trial_x > 1:
             trial_x = 1
@@ -171,5 +171,18 @@ def run_single_monte_carlo_3D():
     end = time.time()
     return best_score, (end - start)
 
-best_score, runtime = run_single_monte_carlo_3D()
-print( "3D", best_score, runtime )
+#best_score, runtime = run_single_monte_carlo_3D()
+#print( "3D", best_score, runtime )
+
+def run3DMC():
+    print( "Starting 3D run" )
+    best_score = 0
+    time = 0
+    for _ in range( 0, 1000 ):
+        score, runtime = run_single_monte_carlo_3D()
+        time += runtime
+        if score < best_score:
+            best_score = score
+        print( time, best_score )
+
+run3DMC()
