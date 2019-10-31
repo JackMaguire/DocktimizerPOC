@@ -8,6 +8,7 @@ import pylab as p
 import mpl_toolkits.mplot3d.axes3d as p3
 
 factor = 25
+seconds_per_score = 1.0
 
 def score_x( x ):
     value = sin( factor * x ) * x
@@ -85,9 +86,9 @@ def estimate_lowest_score_6D():
     return lowest_score;
 
 
-print( "Lowest 2D score: ", estimate_lowest_score_2D() )
+#print( "Lowest 2D score: ", estimate_lowest_score_2D() )
 #print( "Lowest 3D score: ", estimate_lowest_score_3D() )
-print( "Lowest 6D score: ", estimate_lowest_score_6D() )
+#print( "Lowest 6D score: ", estimate_lowest_score_6D() )
 
 def run_single_monte_carlo_2D():
     start = time.time()
@@ -288,7 +289,8 @@ def run_single_monte_carlo_6D():
                     c = trial_c
                     current_score = trial_score
     end = time.time()
-    return best_score, (end - start)
+    #return best_score, (end - start) + (seconds_per_score * 500)
+    return best_score, (seconds_per_score * 500)
 
 def run6DMC():
     print( "Starting 6D run" )
@@ -302,3 +304,27 @@ def run6DMC():
         print( time, best_score )
 
 run6DMC()
+
+
+def run_docktimizer():
+    inputs = []
+    outputs = []
+    time_spent = 0
+    n_init_loop = 100000
+    best_score = 0
+    for _ in range( 0, n_init_loop ):
+        x = np.random.uniform()
+        y = np.random.uniform()
+        z = np.random.uniform()
+        a = np.random.uniform()
+        b = np.random.uniform()
+        c = np.random.uniform()
+        score = score_6D( x, y, z, a, b, c )
+        best_score = min( best_score, score )
+        inputs.append( [ x, y, z, a, b, c ] )
+        outputs.append( [ score ] )
+    time_spent += n_init_loop * seconds_per_score
+    return time_spent, best_score
+
+time, score = run_docktimizer()
+print( time, score )
