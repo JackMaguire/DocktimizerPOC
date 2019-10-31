@@ -1,3 +1,7 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 import math
 from math import sin
 import time
@@ -6,6 +10,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pylab as p
 import mpl_toolkits.mplot3d.axes3d as p3
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import *
+from tensorflow.keras.models import Model
+import tensorflow.keras.backend as K
+import tensorflow as tf
 
 factor = 25
 seconds_per_score = 1.0
@@ -33,6 +43,7 @@ def score_6D( x, y, z, a, b, c ):
     if value > 0:
         value = value / 5
     return value * 100 #to be on the same scale as score3
+
 
 # Visualize
 ## https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
@@ -303,15 +314,45 @@ def run6DMC():
             best_score = score
         print( time, best_score )
 
-run6DMC()
+#run6DMC()
 
+def create_model( num_elements ):
+    dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
+
+    input = Input(shape=(6,), name="in1", dtype="float32" )
+    dense1 = Dense( units=dense_size, activation='relu' )( input )
+    dense2 = Dense( units=100, activation='relu' )( dense1 )
+    dense3 = Dense( units=(dense_size/2), activation='relu' )( dense2 )
+    output = Dense( 1 )( dense3 )
+
+    model = Model(inputs=input, outputs=output )
+    metrics_to_output=[ 'accuracy' ]
+    model.compile( loss='mean_squared_error', optimizer='adam', metrics=metrics_to_output )
+    #model.summary()
+    return model
+
+def generate_minimized_data( model ):
+    values = [ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ]
+
+    m_input = model.input
+    m_output = model.output
+    #m_label = tf1.placeholder(tf.float32)
+    m_loss = model.output
+    m_grad = tf.gradients(m_loss, m_input)[0]
+    print( values )
+    print( m_grad )
+    exit( 0 )
+    return values
 
 def run_docktimizer():
+    start = time.time()
     inputs = []
     outputs = []
     time_spent = 0
     n_init_loop = 100000
     best_score = 0
+
+    #stage 1
     for _ in range( 0, n_init_loop ):
         x = np.random.uniform()
         y = np.random.uniform()
@@ -324,6 +365,26 @@ def run_docktimizer():
         inputs.append( [ x, y, z, a, b, c ] )
         outputs.append( [ score ] )
     time_spent += n_init_loop * seconds_per_score
+
+    #Stage 2
+    #n_train_loop = 1000
+    n_train_loop = 1
+    samples_per_loop = 1000
+    for _ in range( 0, n_train_loop ):
+        #2a train model
+        model = create_model( len( inputs ) )
+        ins = np.asarray( inputs )
+        outs = np.asarray( outputs )
+        #TODO 100 epochs, early stopping
+        model.fit( x=ins, y=outs, batch_size=64, epochs=10, shuffle=True, validation_split=0.1)
+
+        #2b generate next samples
+        data2b = []
+        for i in range( 0, samples_per_loop ):
+            data2b.append( generate_minimized_data( model ) )
+            
+    end = time.time()
+    time_spent += (end - start)
     return time_spent, best_score
 
 time, score = run_docktimizer()
