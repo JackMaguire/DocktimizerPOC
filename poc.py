@@ -426,7 +426,7 @@ def run_docktimizer():
     #Stage 2
     n_train_loop = 1000
     #n_train_loop = 10
-    samples_per_loop = 1000
+    samples_per_loop = 250
     #samples_per_loop = 10
     for loop in range( 0, n_train_loop ):
         print( "" )
