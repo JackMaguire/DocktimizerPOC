@@ -25,7 +25,7 @@ def schedule( epoch, lr ):
     if lr < 0.0001:
         return lr * 2
     return lr * 0.9
-lrs = tensorflow.keras.callbacks.LearningRateScheduler(schedule, verbose=0)
+lrs = tf.keras.callbacks.LearningRateScheduler(schedule, verbose=0)
 callbacks=[lrs]
 
 
@@ -351,9 +351,14 @@ def create_model( num_elements ):
     dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
 
     input = Input(shape=(6,), name="in1", dtype="float32" )
+    '''
     dense1 = Dense( units=dense_size, activation='relu' )( input )
     dense2 = Dense( units=100, activation='relu' )( dense1 )
     dense3 = Dense( units=(dense_size/2), activation='relu' )( dense2 )
+    '''
+    dense1 = Dense( units=100, activation='relu' )( input )
+    dense2 = Dense( units=100, activation='relu' )( dense1 )
+    dense3 = Dense( units=100, activation='relu' )( dense2 )
     output = Dense( 1 )( dense3 )
 
     model = Model(inputs=input, outputs=output )
@@ -421,12 +426,13 @@ def run_docktimizer():
     #Stage 2
     n_train_loop = 1000
     #n_train_loop = 10
-    samples_per_loop = 100
+    samples_per_loop = 1000
     #samples_per_loop = 10
     for loop in range( 0, n_train_loop ):
         print( "" )
         print( "XXX", loop, best_score )
         #2a train model
+        K.clear_session()
         model = create_model( len( inputs ) )
         #global graph
         #graph = tf.get_default_graph()
@@ -453,10 +459,10 @@ def run_docktimizer():
             exit( 0 )
             '''
             inputs.append( input[0].tolist() )
-            print( score )
+            #print( score )
             outputs.append( score )
             best_score = min( best_score, score[0] )
-        print( "YYY", loop, min_this_round )
+        print( "XXY", loop, min_this_round )
     end = time.time()
     time_spent += (end - start)
     return time_spent, best_score
