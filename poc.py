@@ -368,8 +368,15 @@ def create_model( num_elements ):
     return model
 
 def generate_minimized_data( model ):
-    values_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
-    values = np.asarray( values_list )
+    best_score = 1000
+    values = 0
+    for i in range( 0, 10 ):
+        ivalues_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
+        ivalues = np.asarray( ivalues_list )
+        pred = model.predict( ivalues )
+        if pred[0] < best_score or i == 0:
+            best_score = pred[0]
+            values = ivalues
 
     #tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
     #K.clear_session()
@@ -440,6 +447,7 @@ def run_docktimizer():
         outs = np.asarray( outputs )
         #TODO 100 epochs, early stopping
         model.fit( x=ins, y=outs, batch_size=100, epochs=25, shuffle=True, validation_split=0.0, callbacks=callbacks)
+
 
         #2b generate next samples
         data2b = []
