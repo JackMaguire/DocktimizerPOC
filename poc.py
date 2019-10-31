@@ -21,6 +21,14 @@ import tensorflow.compat.v1 as tf1
 factor = 25
 seconds_per_score = 1.0
 
+def schedule( epoch, lr ):
+    if lr < 0.0001:
+        return lr * 2
+    return lr * 0.9
+lrs = tensorflow.keras.callbacks.LearningRateScheduler(schedule, verbose=0)
+callbacks=[lrs]
+
+
 def score_x( x ):
     value = sin( factor * x ) * x
     if value > 0:
@@ -67,6 +75,28 @@ ax.set_zlabel('Score')
 #p.show()
 plt.savefig('test.pdf')
 '''
+
+#https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
 
 def estimate_lowest_score_2D():
     lowest_score = 0.0
@@ -351,14 +381,14 @@ def generate_minimized_data( model ):
     #print( "pred before anything" )
     #print( pred )
     sess = tf1.keras.backend.get_session()
-    coeff = 0.01
+    coeff = 0.1
     for _ in range( 0, 25 ):
         values -= coeff * sess.run( m_grad, {m_input:values})
         coeff /= 2.0
         for i in range( 0, 6 ):
             values[0][i] = min( 1.0, values[0][i] )
             values[0][i] = max( 0.0, values[0][i] )
-        print( values )
+        #print( values )
     #print( "pred at the end" )
     #print( model.predict( values ) )
 
@@ -389,10 +419,13 @@ def run_docktimizer():
     tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
 
     #Stage 2
-    #n_train_loop = 1000
-    n_train_loop = 1
-    samples_per_loop = 1000
-    for _ in range( 0, n_train_loop ):
+    n_train_loop = 1000
+    #n_train_loop = 10
+    samples_per_loop = 100
+    #samples_per_loop = 10
+    for loop in range( 0, n_train_loop ):
+        print( "" )
+        print( "XXX", loop, best_score )
         #2a train model
         model = create_model( len( inputs ) )
         #global graph
@@ -400,14 +433,30 @@ def run_docktimizer():
         ins = np.asarray( inputs )
         outs = np.asarray( outputs )
         #TODO 100 epochs, early stopping
-        model.fit( x=ins, y=outs, batch_size=100, epochs=1, shuffle=True, validation_split=0.1)
+        model.fit( x=ins, y=outs, batch_size=100, epochs=25, shuffle=True, validation_split=0.0, callbacks=callbacks)
 
         #2b generate next samples
         data2b = []
         for i in range( 0, samples_per_loop ):
+            printProgressBar( i, samples_per_loop, "2b" )
             data2b.append( generate_minimized_data( model ) )
         
+        min_this_round = 0
         #2c run next samples (can be combined with 2b)
+        for input in data2b:
+            score = [score_6D( input[0][0], input[0][1], input[0][2], input[0][3], input[0][4], input[0][5] )]
+            min_this_round = min( min_this_round, score[0] )
+            '''
+            print( inputs[ 0 ] )
+            print( input )
+            print( input[0].tolist() )
+            exit( 0 )
+            '''
+            inputs.append( input[0].tolist() )
+            print( score )
+            outputs.append( score )
+            best_score = min( best_score, score[0] )
+        print( "YYY", loop, min_this_round )
     end = time.time()
     time_spent += (end - start)
     return time_spent, best_score
