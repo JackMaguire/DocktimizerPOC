@@ -52,5 +52,5 @@ ax.set_zlabel('Score')
 #p.show()
 plt.savefig('test.pdf')
 
-def run_single_monte_carlo:
+def run_single_monte_carlo():
     pass
