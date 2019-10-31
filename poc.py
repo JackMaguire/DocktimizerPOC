@@ -333,7 +333,7 @@ def create_model( num_elements ):
 
 def generate_minimized_data( model ):
     values = [ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ]
-
+    tf.compat.v1.disable_eager_execution()
     m_input = model.input
     m_output = model.output
     #m_label = tf1.placeholder(tf.float32)
