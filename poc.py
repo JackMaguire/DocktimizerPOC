@@ -16,6 +16,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
 import tensorflow.keras.backend as K
 import tensorflow as tf
+import tensorflow.compat.v1 as tf1
 
 factor = 25
 seconds_per_score = 1.0
@@ -332,16 +333,35 @@ def create_model( num_elements ):
     return model
 
 def generate_minimized_data( model ):
-    values = [ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ]
-    tf.compat.v1.disable_eager_execution()
+    values_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
+    values = np.asarray( values_list )
+
+    #tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
+    #K.clear_session()
+        
+    pred = model.predict( values )
+
     m_input = model.input
     m_output = model.output
-    #m_label = tf1.placeholder(tf.float32)
     m_loss = model.output
     m_grad = tf.gradients(m_loss, m_input)[0]
-    print( values )
-    print( m_grad )
-    exit( 0 )
+
+    #print( "values before anything" )
+    #print( values )
+    #print( "pred before anything" )
+    #print( pred )
+    sess = tf1.keras.backend.get_session()
+    coeff = 0.01
+    for _ in range( 0, 25 ):
+        values -= coeff * sess.run( m_grad, {m_input:values})
+        coeff /= 2.0
+        for i in range( 0, 6 ):
+            values[0][i] = min( 1.0, values[0][i] )
+            values[0][i] = max( 0.0, values[0][i] )
+        print( values )
+    #print( "pred at the end" )
+    #print( model.predict( values ) )
+
     return values
 
 def run_docktimizer():
@@ -366,6 +386,8 @@ def run_docktimizer():
         outputs.append( [ score ] )
     time_spent += n_init_loop * seconds_per_score
 
+    tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
+
     #Stage 2
     #n_train_loop = 1000
     n_train_loop = 1
@@ -373,16 +395,19 @@ def run_docktimizer():
     for _ in range( 0, n_train_loop ):
         #2a train model
         model = create_model( len( inputs ) )
+        #global graph
+        #graph = tf.get_default_graph()
         ins = np.asarray( inputs )
         outs = np.asarray( outputs )
         #TODO 100 epochs, early stopping
-        model.fit( x=ins, y=outs, batch_size=64, epochs=10, shuffle=True, validation_split=0.1)
+        model.fit( x=ins, y=outs, batch_size=100, epochs=1, shuffle=True, validation_split=0.1)
 
         #2b generate next samples
         data2b = []
         for i in range( 0, samples_per_loop ):
             data2b.append( generate_minimized_data( model ) )
-            
+        
+        #2c run next samples (can be combined with 2b)
     end = time.time()
     time_spent += (end - start)
     return time_spent, best_score
