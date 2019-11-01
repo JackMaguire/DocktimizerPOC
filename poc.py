@@ -131,6 +131,7 @@ def estimate_lowest_score_6D():
 #print( "Lowest 2D score: ", estimate_lowest_score_2D() )
 #print( "Lowest 3D score: ", estimate_lowest_score_3D() )
 #print( "Lowest 6D score: ", estimate_lowest_score_6D() )
+#exit( 0 )
 
 def run_single_monte_carlo_2D():
     start = time.time()
@@ -346,6 +347,7 @@ def run6DMC():
         print( time, best_score )
 
 #run6DMC()
+#exit( 0 )
 
 def create_model( num_elements ):
     dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
@@ -368,20 +370,25 @@ def create_model( num_elements ):
     return model
 
 def generate_minimized_data( model ):
+    values_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
+    values = np.asarray( values_list )
+    pred = model.predict( values )
+    '''
     best_score = 1000
     values = 0
-    for i in range( 0, 10 ):
+    for i in range( 0, samples ):
         ivalues_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
         ivalues = np.asarray( ivalues_list )
         pred = model.predict( ivalues )
         if pred[0] < best_score or i == 0:
             best_score = pred[0]
             values = ivalues
+    pred = model.predict( values )
+    '''
 
     #tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
     #K.clear_session()
-        
-    pred = model.predict( values )
+    
 
     m_input = model.input
     m_output = model.output
@@ -396,7 +403,7 @@ def generate_minimized_data( model ):
     coeff = 0.1
     for _ in range( 0, 25 ):
         values -= coeff * sess.run( m_grad, {m_input:values})
-        coeff /= 2.0
+        coeff *= 0.25
         for i in range( 0, 6 ):
             values[0][i] = min( 1.0, values[0][i] )
             values[0][i] = max( 0.0, values[0][i] )
@@ -437,7 +444,7 @@ def run_docktimizer():
     #samples_per_loop = 10
     for loop in range( 0, n_train_loop ):
         print( "" )
-        print( "XXX", loop, best_score )
+        print( "XXX", time_spent, best_score )
         #2a train model
         K.clear_session()
         model = create_model( len( inputs ) )
@@ -452,7 +459,7 @@ def run_docktimizer():
         #2b generate next samples
         data2b = []
         for i in range( 0, samples_per_loop ):
-            printProgressBar( i, samples_per_loop, "2b" )
+            #printProgressBar( i, samples_per_loop, "2b" )
             data2b.append( generate_minimized_data( model ) )
         
         min_this_round = 0
@@ -470,6 +477,7 @@ def run_docktimizer():
             #print( score )
             outputs.append( score )
             best_score = min( best_score, score[0] )
+        time_spent += len( data2b ) * seconds_per_score
         print( "XXY", loop, min_this_round )
     end = time.time()
     time_spent += (end - start)
