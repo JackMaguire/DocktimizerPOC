@@ -135,26 +135,13 @@ def estimate_lowest_score_6D():
 #exit( 0 )
 
 
-def run_single_monte_carlo_6D( shuffle, func ):
+def run_single_monte_carlo_6D_from_starting_position( func, x, y, z, a, b, c ):
     start = time.time()
-    if shuffle:
-        x = np.random.normal( 0.5, 0.1 )
-        y = np.random.normal( 0.5, 0.1 )
-        z = np.random.normal( 0.5, 0.1 )
-        a = np.random.normal( 0.5, 0.1 )
-        b = np.random.normal( 0.5, 0.1 )
-        c = np.random.normal( 0.5, 0.1 )
-    else:
-        x = 0.5
-        y = 0.5
-        z = 0.5
-        a = 0.5
-        b = 0.5
-        c = 0.5
 
     score = func( x, y, z, a, b, c )
     best_score = score
     current_score = score
+    best_pos = [ x, y, z, a, b, c ]
 
     neg_temp = -0.8 # Based on DockingLowRes.cc
 
@@ -207,6 +194,7 @@ def run_single_monte_carlo_6D( shuffle, func ):
             current_score = trial_score
             if trial_score < best_score:
                 best_score = trial_score
+                best_pos = [x,y,z,a,b,c]
                 #print( x, y )
         else:
             score_delta = trial_score - current_score
@@ -224,14 +212,33 @@ def run_single_monte_carlo_6D( shuffle, func ):
                     current_score = trial_score
     end = time.time()
     #return best_score, (end - start) + (seconds_per_score * 500)
-    return best_score, (seconds_per_score * 500)
+    return best_score, (seconds_per_score * 500), best_pos
+
+def run_single_monte_carlo_6D( shuffle, func ):
+    if shuffle:
+        x = np.random.normal( 0.5, 0.1 )
+        y = np.random.normal( 0.5, 0.1 )
+        z = np.random.normal( 0.5, 0.1 )
+        a = np.random.normal( 0.5, 0.1 )
+        b = np.random.normal( 0.5, 0.1 )
+        c = np.random.normal( 0.5, 0.1 )
+    else:
+        x = 0.5
+        y = 0.5
+        z = 0.5
+        a = 0.5
+        b = 0.5
+        c = 0.5
+    best_score, time, best_pos = run_single_monte_carlo_6D_from_starting_position( func, x, y, z, a, b, c )
+    return best_score, time, best_pos
+
 
 def run6DMC( shuffle=False ):
     print( "Starting 6D run" )
     best_score = 0
     time = 0
     for _ in range( 0, 1000 ):
-        score, runtime = run_single_monte_carlo_6D( shuffle, score_6D )
+        score, runtime, best_pos = run_single_monte_carlo_6D( shuffle, score_6D )
         time += runtime
         if score < best_score:
             best_score = score
@@ -241,15 +248,10 @@ def run6DMC( shuffle=False ):
 #run6DMC( True )
 #exit( 0 )
 
-def create_model( num_elements ):
-    dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
+def create_model():
+    #dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
 
     input = Input(shape=(6,), name="in1", dtype="float32" )
-    '''
-    dense1 = Dense( units=dense_size, activation='relu' )( input )
-    dense2 = Dense( units=100, activation='relu' )( dense1 )
-    dense3 = Dense( units=(dense_size/2), activation='relu' )( dense2 )
-    '''
     dense1 = Dense( units=100, activation='relu' )( input )
     dense2 = Dense( units=100, activation='relu' )( dense1 )
     dense3 = Dense( units=100, activation='relu' )( dense2 )
@@ -305,83 +307,77 @@ def generate_minimized_data( model, values ):
 
     return values
 
+
+inputs = []
+outputs = []
+def score_and_score( x, y, z, a, b, c ):
+    score = score_6D( x, y, z, a, b, c )
+    inputs.append( [ x, y, z, a, b, c ] )
+    outputs.append( [ score ] )
+    return score
+
 def run_docktimizer():
     start = time.time()
-    inputs = []
-    outputs = []
+    #inputs = []
+    #outputs = []
     time_spent = 0
-    n_init_loop = 10000
+    n_init_loop = 100
     best_score = 0
 
     #stage 1
     for _ in range( 0, n_init_loop ):
-        x = np.random.uniform()
-        y = np.random.uniform()
-        z = np.random.uniform()
-        a = np.random.uniform()
-        b = np.random.uniform()
-        c = np.random.uniform()
-        score = score_6D( x, y, z, a, b, c )
+        score, runtime, best_pos = run_single_monte_carlo_6D( True, score_and_score )
+        time_spent += runtime
         best_score = min( best_score, score )
-        inputs.append( [ x, y, z, a, b, c ] )
-        outputs.append( [ score ] )
-    time_spent += n_init_loop * seconds_per_score
 
+    print( len( inputs ), best_score )
+    #exit( 0 )
     tf.compat.v1.disable_eager_execution() #needs to be done to call tf.gradients
 
     #Stage 2
-    n_train_loop = 1000
-    #n_train_loop = 10
+    #n_train_loop = 1000
+    n_train_loop = 10
     samples_per_loop = 250
     #samples_per_loop = 10
-    for loop in range( 0, n_train_loop ):
+    for oloop in range( 0, n_train_loop ):
         print( "" )
         print( "XXX", time_spent, best_score )
-
-        #2a generate seeds for sampling
-        seeds = []
-        for i in range( 0, samples_per_loop ):
-            values_list = [[ np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform(), np.random.uniform() ],]
-            values = np.asarray( values_list )
-            score = [score_6D( values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5] )]
-            inputs.append( values_list[0] )
-            outputs.append( score )
-            seeds.append( values )
-            
-
-        #2b train model
+        #train model
         K.clear_session()
-        model = create_model( len( inputs ) )
-        #global graph
-        #graph = tf.get_default_graph()
+        model = create_model()
         ins = np.asarray( inputs )
         outs = np.asarray( outputs )
-        #TODO 100 epochs, early stopping
         model.fit( x=ins, y=outs, batch_size=100, epochs=25, shuffle=True, validation_split=0.0, callbacks=callbacks)
-        
-        #2c generate next samples
-        data2b = []
-        for i in range( 0, samples_per_loop ):
-            #printProgressBar( i, samples_per_loop, "2b" )
-            data2b.append( generate_minimized_data( model, seeds[ i ] ) )
 
         min_this_round = 0
-        #2d run next samples (can be combined with 2b)
-        for input in data2b:
-            score = [score_6D( input[0][0], input[0][1], input[0][2], input[0][3], input[0][4], input[0][5] )]
-            min_this_round = min( min_this_round, score[0] )
-            '''
-            print( inputs[ 0 ] )
-            print( input )
-            print( input[0].tolist() )
-            exit( 0 )
-            '''
-            inputs.append( input[0].tolist() )
-            #print( score )
-            outputs.append( score )
-            best_score = min( best_score, score[0] )
-        time_spent += len( data2b ) * seconds_per_score * 2
-        print( "XXY", loop, min_this_round )
+        for iloop in range( 0, samples_per_loop ):
+            #generate starting position
+            #np.random.uniform()
+            #np.random.normal( 0.5, 0.1 )
+            values_list = [[ np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ) ],]
+            values = np.asarray( values_list )
+
+            #score starting position
+            start_score = score_6D( values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5] );
+            inputs.append( values_list[0] )
+            outputs.append( [ start_score ] )
+
+            #sample
+            def score_with_model( x, y, z, a, b, c ):
+                return model.predict( np.asarray([[ x, y, z, a, b, c ],]) )[0]
+            score, runtime, best_pos = run_single_monte_carlo_6D( True, score_with_model )
+            
+            #score final position
+            final_score = score_6D( best_pos[0], best_pos[1], best_pos[2], best_pos[3], best_pos[4], best_pos[5] );
+            inputs.append( [ best_pos ] )
+            outputs.append( [ final_score ] )
+            min_this_round = min( min_this_round, final_score )
+            #print( start_score, final_score )
+            time_spent += 2 * seconds_per_score # scores
+        print( "XXY", min_this_round )
+        
+        #time_spent += len( data2b ) * seconds_per_score * 2
+        #print( "XXY", loop, min_this_round )
     end = time.time()
     time_spent += (end - start)
     return time_spent, best_score
