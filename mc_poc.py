@@ -373,7 +373,8 @@ def run_docktimizer():
             outputs.append( [ final_score ] )
             min_this_round = min( min_this_round, final_score )
             #print( start_score, final_score )
-            time_spent += 2 * seconds_per_score # scores
+
+        time_spent += 2 * seconds_per_score * samples_per_loop # 2 scores per iloop
         print( "XXY", min_this_round )
         
         #time_spent += len( data2b ) * seconds_per_score * 2
