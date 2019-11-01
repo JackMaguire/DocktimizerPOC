@@ -310,7 +310,7 @@ def generate_minimized_data( model, values ):
 
 inputs = []
 outputs = []
-def score_and_score( x, y, z, a, b, c ):
+def score_and_store( x, y, z, a, b, c ):
     score = score_6D( x, y, z, a, b, c )
     inputs.append( [ x, y, z, a, b, c ] )
     outputs.append( [ score ] )
@@ -318,15 +318,14 @@ def score_and_score( x, y, z, a, b, c ):
 
 def run_docktimizer():
     start = time.time()
-    #inputs = []
-    #outputs = []
+
     time_spent = 0
-    n_init_loop = 100
     best_score = 0
 
+    n_init_loop = 100
     #stage 1
     for _ in range( 0, n_init_loop ):
-        score, runtime, best_pos = run_single_monte_carlo_6D( True, score_and_score )
+        score, runtime, best_pos = run_single_monte_carlo_6D( True, score_and_store )
         time_spent += runtime
         best_score = min( best_score, score )
 
@@ -337,8 +336,8 @@ def run_docktimizer():
     #Stage 2
     #n_train_loop = 1000
     n_train_loop = 10
-    samples_per_loop = 250
-    #samples_per_loop = 10
+    #samples_per_loop = 250
+    samples_per_loop = 10
     for oloop in range( 0, n_train_loop ):
         print( "" )
         print( "XXX", time_spent, best_score )
@@ -358,6 +357,7 @@ def run_docktimizer():
             values = np.asarray( values_list )
 
             #score starting position
+            #TODO PICK THESE BEFORE STARTING!!!
             start_score = score_6D( values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5] );
             inputs.append( values_list[0] )
             outputs.append( [ start_score ] )
@@ -369,16 +369,13 @@ def run_docktimizer():
             
             #score final position
             final_score = score_6D( best_pos[0], best_pos[1], best_pos[2], best_pos[3], best_pos[4], best_pos[5] );
-            inputs.append( [ best_pos ] )
+            inputs.append( best_pos )
             outputs.append( [ final_score ] )
             min_this_round = min( min_this_round, final_score )
             #print( start_score, final_score )
 
         time_spent += 2 * seconds_per_score * samples_per_loop # 2 scores per iloop
         print( "XXY", min_this_round )
-        
-        #time_spent += len( data2b ) * seconds_per_score * 2
-        #print( "XXY", loop, min_this_round )
     end = time.time()
     time_spent += (end - start)
     return time_spent, best_score
