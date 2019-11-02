@@ -249,7 +249,7 @@ def run6DMC( shuffle=False ):
 #exit( 0 )
 
 def create_model():
-    #dense_size = int( 100 + math.sqrt( num_elements / 100 ) )
+    #TODO sin, cos logic?
 
     input = Input(shape=(6,), name="in1", dtype="float32" )
     dense1 = Dense( units=100, activation='relu' )( input )
@@ -335,12 +335,28 @@ def run_docktimizer():
 
     #Stage 2
     #n_train_loop = 1000
-    n_train_loop = 10
-    #samples_per_loop = 250
-    samples_per_loop = 10
+    n_train_loop = 100
+    samples_per_loop = 250
+    #samples_per_loop = 10
     for oloop in range( 0, n_train_loop ):
         print( "" )
         print( "XXX", time_spent, best_score )
+
+        starting_positions = []
+        for iloop in range( 0, samples_per_loop ):
+            #generate starting position
+            #np.random.uniform()
+            #np.random.normal( 0.5, 0.1 )
+            values_list = [[ np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ) ],]
+            values = np.asarray( values_list )
+
+            #score starting position
+            start_score = score_6D( values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5] );
+            inputs.append( values_list[0] )
+            outputs.append( [ start_score ] )
+            starting_positions.append( values )
+
+
         #train model
         K.clear_session()
         model = create_model()
@@ -350,23 +366,12 @@ def run_docktimizer():
 
         min_this_round = 0
         for iloop in range( 0, samples_per_loop ):
-            #generate starting position
-            #np.random.uniform()
-            #np.random.normal( 0.5, 0.1 )
-            values_list = [[ np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ), np.random.normal( 0.5, 0.1 ) ],]
-            values = np.asarray( values_list )
-
-            #score starting position
-            #TODO PICK THESE BEFORE STARTING!!!
-            start_score = score_6D( values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5] );
-            inputs.append( values_list[0] )
-            outputs.append( [ start_score ] )
-
+            values = starting_positions[ iloop ]
             #sample
             def score_with_model( x, y, z, a, b, c ):
                 return model.predict( np.asarray([[ x, y, z, a, b, c ],]) )[0]
-            score, runtime, best_pos = run_single_monte_carlo_6D( True, score_with_model )
-            
+            score, runtime, best_pos = run_single_monte_carlo_6D_from_starting_position( score_with_model, values[0][0], values[0][1], values[0][2], values[0][3], values[0][4], values[0][5])
+
             #score final position
             final_score = score_6D( best_pos[0], best_pos[1], best_pos[2], best_pos[3], best_pos[4], best_pos[5] );
             inputs.append( best_pos )
