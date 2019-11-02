@@ -72,10 +72,12 @@ def estimate_lowest_score_2D():
 
 def create_model():
     input = Input(shape=(2,), name="in1", dtype="float32" )
-    dense1 = Dense( units=25, activation='relu' )( input )
-    dense2 = Dense( units=25, activation='relu' )( dense1 )
-    dense3 = Dense( units=25, activation='relu' )( dense2 )
-    output = Dense( 1 )( dense3 )
+    dense1 = Dense( units=100, activation='relu' )( input )
+    dense2 = Dense( units=100, activation='relu' )( dense1 )
+    dense3 = Dense( units=100, activation='relu' )( dense2 )
+    dense4 = Dense( units=100, activation='relu' )( dense3 )
+    dense5 = Dense( units=100, activation='relu' )( dense4 )
+    output = Dense( 1 )( dense5 )
 
     model = Model(inputs=input, outputs=output )
     metrics_to_output=[ 'accuracy' ]
@@ -108,7 +110,7 @@ def generate_image_from_model( model, num ):
     ax.set_ylabel('Y')
     ax.set_zlabel('Score')
     #p.show()
-    plt.savefig("model_" + str(num) + ".png")
+    plt.savefig("model_" + str(num).zfill( 5 ) + ".png")
 
 def generate_ML_pics( num_pics, samples_per_frame ):
     inputs = []
@@ -123,4 +125,4 @@ def generate_ML_pics( num_pics, samples_per_frame ):
         model = train_model_on_data( inputs, outputs )
         generate_image_from_model( model, i )
 
-generate_ML_pics( 10, 1000 )
+generate_ML_pics( 1, 10000 )
