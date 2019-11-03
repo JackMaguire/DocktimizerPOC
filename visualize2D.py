@@ -32,8 +32,9 @@ callbacks=[lrs]
 def score_xy( x, y ):
     value = sin( factor * x ) * sin( factor * y ) * (x+y)
     if value > 0:
-        value = value / 5
-    return value * 100#to be on the same scale as score3
+        value = 0.0
+        #value = value / 5
+    return value#to be on the same scale as score3
 
 
 # Visualize
@@ -125,4 +126,4 @@ def generate_ML_pics( num_pics, samples_per_frame ):
         model = train_model_on_data( inputs, outputs )
         generate_image_from_model( model, i )
 
-generate_ML_pics( 1, 10000 )
+generate_ML_pics( 1000, 10000 )
